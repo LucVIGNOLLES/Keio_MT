@@ -12,9 +12,10 @@ class Cam:
         self.keypoints = np.array(keypoint_radii) 
         self.step = 2*np.pi/len(keypoint_radii)
         self.range = keypoint_range
+        self.perim = des_perim
 
         # Compute the perimeter of the unscaled cam
-        unscaled_perim = self.r_int_approx(0, 2*np.pi, 0)
+        unscaled_perim = self.r_int_approx(0, 2*np.pi-0.01, 0)
         # Compute the nessecary scaling to apply in order for the cam to have the desired perimeter
         scale = des_perim/unscaled_perim
 
@@ -51,7 +52,7 @@ class Cam:
         Returns the coordinates of a point at angle alpha on a cam in configuuration gamma, 
         assuming the center of rotation is the origin
         """
-        return self.r(angle)*(np.cos(angle)*np.cos(gamma) - np.sin(angle)*np.sin(gamma)), self.r(angle)*(np.cos(angle)*np.sin(gamma) + np.sin(angle)*np.cos(gamma))
+        return self.r(angle)*np.cos(angle+gamma), self.r(angle)*np.sin(angle+gamma)
 
     def r_der_approx(self, alpha, gamma, h = 0.00000000001):
         """
@@ -66,15 +67,21 @@ class Cam:
         """
         Returns the approximate arc lenght along a cam in position gamma for angles between alpha1 and alpha2 
         """
-        alpha_vec = np.arange(angle1, angle2+h, h)[1:]
-        sum = 0
-        for alpha in alpha_vec:
-            pt1 = self.r_cart(alpha, gamma)
-            pt2 = self.r_cart(alpha+h, gamma)
 
-            sum += norm2(pt1, pt2)
-        
-        return sum
+        angle1 = angle1 % (2*np.pi)
+        angle2 = angle2 % (2*np.pi)
+
+        if angle1 > angle2:
+            return self.perim - self.r_int_approx(angle2, angle1, gamma, h)
+        else :
+            alpha_vec = np.arange(angle1, angle2, h)[1:]
+            sum = 0
+            for alpha in alpha_vec:
+                pt1 = self.r_cart(alpha, 0)
+                pt2 = self.r_cart(alpha+h, 0)
+
+                sum += norm2(pt1, pt2)
+            return sum
 
     #TODO: we might not need to use gamma when computing tangents or arc lenghts. 
     # but doing it without using absolute coordinates seems complicated anyway.

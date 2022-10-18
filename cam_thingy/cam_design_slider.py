@@ -5,7 +5,7 @@ from cam_gen import Cam
 
 xd, yd = 0.15, -0.2 # Coordinates of the fixed point
 
-cam = Cam([1, 1.2, 1.3, 1.2, 1.1, 1, 1], 1, 0.05)
+cam = Cam([1, 1.2, 1.3, 1.2, 1.1, 1, 1], 1, 0.5)
 
 theta_vec = np.arange(0, 2 * np.pi, .05)[1:]
 fig = plt.figure()

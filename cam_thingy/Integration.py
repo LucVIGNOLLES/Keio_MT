@@ -1,61 +1,117 @@
 import numpy as np
 from Tsa import Tsa
 from cam_gen import Cam
+from cam_contact import bisection, naive_min
 import matplotlib.pyplot as plt
 
+# Anchor point's position ralative to the cam's center of rotation
 XS = 0.15
 YS = -0.2
 
+# Desired movement range of the driven arm 
 GAMMA0 = 0
 GAMMAM = np.pi
 
 def norm2(u,v):
+    """
+    Returns the distance defined by norm2 between to vectors
+    """
     return np.sqrt((v[0] - u[0])**2 + (v[1] - u[1])**2)
 
 def l_cam(cam, xs, ys, gamma):
-    alpha_min = 0
-    min = 100
+    """
+    Computes the lenght of cable that would be necessary to go from a specific point 
+    on the cam to the anchored point. 
+    """
 
-    for alpha in np.arange(-np.pi/4 - gamma, np.pi/2 - gamma, .1)[1:]:
-        xa, ya = cam.r_cart(alpha, gamma)
-        xv, yv = cam.r_der_approx(alpha, gamma)
+    s = np.array([xs, ys, 0])
+    alpha_min = bisection(cam, gamma, xs, ys)
 
-        a = np.array([xa, ya])
-        v = np.array([xv, yv])
-        s = np.array([xs, ys])
-
-        cross = np.cross(v, s-a)
-
-        if abs(cross) < min:
-            min = abs(cross)
-            alpha_min = alpha
-
+    # Point where the minimum was found (not always the right one)
     xa_min, ya_min = cam.r_cart(alpha_min, gamma)
 
-    len1 = norm2((s[0], s[1]), (xa_min, ya_min))
+    # Straight line between the contact point and the anchor.
+    len1 = norm2((s[0], s[1]), (xa_min, ya_min)) 
+    #Perimeter on the cam between the contact point and an arbitrary point.
+    len2 = cam.r_int_approx(alpha_min, np.pi, gamma)
+
+    return len1 + len2
+
+def l_cam_naive(cam, xs, ys, gamma):
+    """
+    Computes the lenght of cable that would be necessary to go from a specific point 
+    on the cam to the anchored point. 
+    """
+
+    s = np.array([xs, ys, 0])
+    alpha_min = naive_min(cam, gamma, xs, ys)
+
+    # Point where the minimum was found (not always the right one)
+    xa_min, ya_min = cam.r_cart(alpha_min, gamma)
+
+    # Straight line between the contact point and the anchor.
+    len1 = norm2((s[0], s[1]), (xa_min, ya_min)) 
+    # Perimeter on the cam between the contact point and an arbitrary point.
     len2 = cam.r_int_approx(alpha_min, np.pi, gamma)
 
     return len1 + len2
 
 def l_rel_cam(cam, xs, ys, gamma):
+    """
+    Returns how mush string needs to be given of taken from the cam part for it to rotate from gamma = 0 to a given angle
+    """
     return l_cam(cam, xs, ys, gamma) - l_cam(cam, xs, ys, 0)
+
+def l_rel_naive(cam, xs, ys, gamma):
+    """
+    Returns how mush string needs to be given of taken from the cam part for it to rotate from gamma = 0 to a given angle
+    """
+    return l_cam_naive(cam, xs, ys, gamma) - l_cam_naive(cam, xs, ys, 0)
 
 # Main ======
 
 if __name__ == "__main__":
 
-    cam = Cam([2.5, 2, 1.5, 1, 1.5, 1.7, 2], 2, 0.5)
-    actu = Tsa(0.3, 0.003, 0.01, 0, 1)
+    # Define cam part and actuator part
+    cam = Cam([0.8, 1.3, 1.7, 2., 1.8, 1.2, 0.6], 3, 0.5)
+    actu = Tsa(0.2, 0.003, 0.01, 0, 1)
 
-    gamma_range = np.arange(GAMMAM, GAMMA0, -0.05)
-    theta_list = []
+    print(cam.r_cart(np.pi, 2), "; ", cam.r_cart(np.pi*3, 2))
+
+    # Define angle restrictions for the rotation of the driven arm (and direction as well)
+    gamma_range = np.arange(GAMMAM, GAMMA0, -0.04)
+    theta_list1 = []
+    theta_list2 = []
+
+    l_list1 = []
+    l_list2 = []
 
     for gamma in gamma_range:
-        l = l_rel_cam(cam, XS, YS, gamma)
-        theta_list.append(actu.theta(l))
+        # TODO: It'd be more efficient to compute the change in lenght between each pass (ie, only the "first" and last segments in l_cam)
+        # Here we're calling l_cam twice for no reason in l_rel_cam.
+        l1 = l_rel_cam(cam, XS, YS, gamma)
+
+        l_list1.append(l1)
+        theta_list1.append(actu.theta_rel(l1)) 
+
+    plt.figure(1) # Angle relation graph
 
     plt.plot([GAMMA0, GAMMAM], [actu.theta_max, actu.theta_max], 'r-')
-    plt.plot(gamma_range, theta_list)
+    plt.plot(gamma_range, theta_list1, 'b.')
+
+    plt.figure(2) # Cam shape
+
+    theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
+    X = []
+    Y = []
+    for theta in theta_vec:
+        x, y = cam.r_cart(theta, 0)
+        X.append(x)
+        Y.append(y)
+
+    plt.plot(X,Y)
+    plt.plot(0,0, '.')
     plt.show()
+
 
     
