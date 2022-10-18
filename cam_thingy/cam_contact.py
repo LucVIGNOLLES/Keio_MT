@@ -117,9 +117,6 @@ if __name__ == "__main__":
         al2 = naive_min(cam, gamma_slider.val, xf, yf)
         ax.plot([al1, al1], [-0.1,0.1], 'y-')
         ax.plot([al2, al2], [-0.1,0.1], 'g-')
-        if DEBUG:
-            for a in lst:
-                ax.plot([a, a], [-0.1,0.1], 'g-')
 
         fig.canvas.draw_idle()
 
