@@ -1,3 +1,4 @@
+from calendar import LocaleTextCalendar
 import numpy as np
 from Tsa import Tsa
 from cam_gen import Cam
@@ -18,14 +19,13 @@ def norm2(u,v):
     """
     return np.sqrt((v[0] - u[0])**2 + (v[1] - u[1])**2)
 
-def l_cam(cam, xs, ys, gamma):
+def l_cam(cam, xs, ys, gamma, thresh):
     """
     Computes the lenght of cable that would be necessary to go from a specific point 
     on the cam to the anchored point. 
     """
-
     s = np.array([xs, ys, 0])
-    alpha_min = bisection(cam, gamma, xs, ys)
+    alpha_min = bisection(cam, gamma, xs, ys, cross_thresh=thresh)
 
     # Point where the minimum was found (not always the right one)
     xa_min, ya_min = cam.r_cart(alpha_min, gamma)
@@ -56,11 +56,11 @@ def l_cam_naive(cam, xs, ys, gamma):
 
     return len1 + len2
 
-def l_rel_cam(cam, xs, ys, gamma):
+def l_rel_cam(cam, xs, ys, gamma, thresh):
     """
     Returns how mush string needs to be given of taken from the cam part for it to rotate from gamma = 0 to a given angle
     """
-    return l_cam(cam, xs, ys, gamma) - l_cam(cam, xs, ys, 0)
+    return l_cam(cam, xs, ys, gamma, thresh) - l_cam(cam, xs, ys, 0, thresh)
 
 def l_rel_naive(cam, xs, ys, gamma):
     """
@@ -76,8 +76,6 @@ if __name__ == "__main__":
     cam = Cam([0.8, 1.3, 1.7, 2., 1.8, 1.2, 0.6], 3, 0.5)
     actu = Tsa(0.2, 0.003, 0.01, 0, 1)
 
-    print(cam.r_cart(np.pi, 2), "; ", cam.r_cart(np.pi*3, 2))
-
     # Define angle restrictions for the rotation of the driven arm (and direction as well)
     gamma_range = np.arange(GAMMAM, GAMMA0, -0.04)
     theta_list1 = []
@@ -89,15 +87,20 @@ if __name__ == "__main__":
     for gamma in gamma_range:
         # TODO: It'd be more efficient to compute the change in lenght between each pass (ie, only the "first" and last segments in l_cam)
         # Here we're calling l_cam twice for no reason in l_rel_cam.
-        l1 = l_rel_cam(cam, XS, YS, gamma)
+        l1 = l_rel_cam(cam, XS, YS, gamma, 1e-7)
+        l2 = l_rel_cam(cam, XS, YS, gamma, 1e-8)
+
 
         l_list1.append(l1)
-        theta_list1.append(actu.theta_rel(l1)) 
+        l_list2.append(l2)
+        theta_list1.append(actu.theta_rel(l1))
+        theta_list2.append(actu.theta_rel(l2)) 
 
     plt.figure(1) # Angle relation graph
 
     plt.plot([GAMMA0, GAMMAM], [actu.theta_max, actu.theta_max], 'r-')
     plt.plot(gamma_range, theta_list1, 'b.')
+    plt.plot(gamma_range, theta_list2, 'g.')
 
     plt.figure(2) # Cam shape
 

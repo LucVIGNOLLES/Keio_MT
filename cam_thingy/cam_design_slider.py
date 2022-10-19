@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from cam_gen import Cam
+from cam_contact import bisection
 
 xd, yd = 0.15, -0.2 # Coordinates of the fixed point
 
-cam = Cam([1, 1.2, 1.3, 1.2, 1.1, 1, 1], 1, 0.5)
+cam = Cam([0.8, 1.3, 1.7, 2., 1.8, 1.2, 0.6], 3, 0.5)
 
 theta_vec = np.arange(0, 2 * np.pi, .05)[1:]
 fig = plt.figure()
@@ -24,8 +25,8 @@ gamma_slider = Slider(
 # The function to be called anytime a slider's value changes
 def update(val):
     ax.clear()
-    ax.set_xlim([-0.3,0.3])
-    ax.set_ylim([-0.4, 0.2])
+    ax.set_xlim([-0.1,0.1])
+    ax.set_ylim([-0.1, 0.1])
 
     ax.plot(xd, yd, 'go')
     ax.plot([0], [0], 'ro')
@@ -44,23 +45,25 @@ def update(val):
     # Search for the point where the string contacts the cam
     # This version looks for a minimum of cross product between the tangent to the cam at a given 
     # point and the straight line between that point and the fixed point 
-    for alpha in np.arange(-np.pi/4 - gamma_slider.val, np.pi/2 - gamma_slider.val, .1)[1:]:
-        xa, ya = cam.r_cart(alpha, gamma_slider.val)
-        xv, yv = cam.r_der_approx(alpha, gamma_slider.val)
+    # for alpha in np.arange(-np.pi/4 - gamma_slider.val, np.pi/2 - gamma_slider.val, .1)[1:]:
+    #     xa, ya = cam.r_cart(alpha, gamma_slider.val)
+    #     xv, yv = cam.r_der_approx(alpha, gamma_slider.val)
 
-        a = np.array([xa, ya])
-        v = np.array([xv, yv])
-        d = np.array([xd, yd])
+    #     a = np.array([xa, ya])
+    #     v = np.array([xv, yv])
+    #     d = np.array([xd, yd])
 
-        cross = np.cross(v, d-a)
+    #     cross = np.cross(v, d-a)
 
-        if abs(cross) < min:
-            min = abs(cross)
-            al_min = alpha
+    #     if abs(cross) < min:
+    #         min = abs(cross)
+    #         al_min = alpha
 
     # TODO switch to a more optimized algorithm
-    # - Euler's method
+    # - Biscetion
     # - "Ray tracing" from the fixed point until there's only one intersection point with the cam
+
+    al_min = bisection(cam, gamma_slider.val, xd, yd)
 
     xa_min, ya_min = cam.r_cart(al_min, gamma_slider.val)
     xv_min, yv_min = cam.r_der_approx(al_min, gamma_slider.val)
@@ -77,6 +80,8 @@ def update(val):
 
     ax.plot(x2, y2, 'r-', linewidth = 3)
     ax.plot([xa_min, xd], [ya_min, yd], 'r-', linewidth = 3)
+
+    ax.plot(xa_min, ya_min, 'g.')
 
     fig.canvas.draw_idle()
 

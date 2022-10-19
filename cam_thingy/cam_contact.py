@@ -7,7 +7,7 @@ plt.style.use('dark_background')
 
 DEBUG = 0
 
-def bisection(cam, gamma, xf, yf, alpha_min = -2*np.pi, alpha_max = 4*np.pi):
+def bisection(cam, gamma, xf, yf, alpha_min = -2*np.pi, alpha_max = 4*np.pi, cross_thresh = 1e-5, max_step = 1000):
     """
     Only works for very smooth cams, otherwise  there are too many local minimas
     Edit : now it actually works... kinda
@@ -23,7 +23,7 @@ def bisection(cam, gamma, xf, yf, alpha_min = -2*np.pi, alpha_max = 4*np.pi):
     cross = np.array([0,0,1])
     steps = 0
 
-    while abs(cross[2]) > 0.000000001 and steps < 1000:
+    while abs(cross[2]) > cross_thresh and steps < max_step:
         steps = steps + 1
 
         # Compute point and tangent
