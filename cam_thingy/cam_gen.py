@@ -63,9 +63,10 @@ class Cam:
 
         return (x_h - x)/h, (y_h - y)/h
     
-    def r_int_approx(self,angle1, angle2, gamma, h = .01):
+    def r_int_approx(self, angle1, angle2, gamma, h = .01):
         """
         Returns the approximate arc lenght along a cam in position gamma for angles between alpha1 and alpha2 
+        assuming alpha1 < alpha2
         """
 
         angle1 = angle1 % (2*np.pi)
@@ -83,8 +84,21 @@ class Cam:
                 sum += norm2(pt1, pt2)
             return sum
 
-    #TODO: we might not need to use gamma when computing tangents or arc lenghts. 
-    # but doing it without using absolute coordinates seems complicated anyway.
+    def get_perim(self, alpha, delta_alpha, h = 0.005):
+        """
+        Returns the arc lenght on the cam between alpha1 and alpha + delta_alpha. 
+        The lenght if signed according to the direct rotation direction
+        """
+        alpha_vec = np.arange(alpha, alpha + delta_alpha, h)[1:]
+        sum = 0
+        for alpha in alpha_vec:
+            pt1 = self.r_cart(alpha, 0)
+            pt2 = self.r_cart(alpha+h, 0)
+
+            sum += norm2(pt1, pt2)
+
+        return sum
+
 
 
 ## Testing ======
@@ -92,7 +106,7 @@ class Cam:
 if __name__ == "__main__":
     test_cam = Cam([1, 1, 1.5, 3, 1.7, 1.2, 1], 2.5, 2)
 
-    perim1 = test_cam.r_int_approx(0, np.pi*2, 0)
+    perim1 = test_cam.get_perim(0, np.pi*2, 0.005)
 
     print(perim1)
 
