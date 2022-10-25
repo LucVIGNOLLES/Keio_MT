@@ -66,7 +66,7 @@ def update(val):
     al_min = bisection(cam, gamma_slider.val, xd, yd)
 
     xa_min, ya_min = cam.r_cart(al_min, gamma_slider.val)
-    xv_min, yv_min = cam.r_der_approx(al_min, gamma_slider.val)
+    xv_min, yv_min = cam.approx_tangent(al_min, gamma_slider.val)
 
     alpha_vec = np.arange(al_min, np.pi, .05)[1:]
     x2 = []

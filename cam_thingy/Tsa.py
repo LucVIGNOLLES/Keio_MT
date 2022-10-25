@@ -1,6 +1,3 @@
-from cmath import sqrt
-from msilib.schema import SelfReg
-from xml.dom.expatbuilder import theDOMImplementation
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -8,7 +5,7 @@ class Tsa:
     def __init__(self, len_d, rad_0, sep_a, sep_b, sprg_k=1) -> None:
         self.d = len_d # Twist zone lenght
         self.L0 = np.sqrt(len_d**2 + (sep_a + sep_b)**2) # Lenght when motor angle is 0
-        self.r0 = rad_0 # Coilong radius
+        self.r0 = rad_0 # Coiling radius
         self.sa = sep_a 
         self.sb = sep_b
         self.k = sprg_k
@@ -17,7 +14,7 @@ class Tsa:
         # it might be off by pi
 
     def h(self, theta):
-        # Cap the contraction by taking max motor anlg einto account
+        # Cap the contraction by taking max motor angle into account
         if theta > self.theta_max:
              return self.h(self.theta_max)
         # Special case whan both separators are non zero, we can extend the range to -pi

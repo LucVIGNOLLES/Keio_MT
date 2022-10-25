@@ -101,7 +101,7 @@ if __name__ == "__main__":
         cross_vec = []
         for alpha in alpha_vec:
             xa, ya = cam.r_cart(alpha, gamma_slider.val)
-            xv, yv = cam.r_der_approx(alpha, gamma_slider.val)
+            xv, yv = cam.approx_tangent(alpha, gamma_slider.val)
 
             a = np.array([xa, ya, 0])
             v = np.array([xv, yv, 0])

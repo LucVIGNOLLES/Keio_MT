@@ -1,10 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import interpolate
 from blend_keypoints import blend_func
-
-def norm2(u,v):
-    return np.sqrt((v[0] - u[0])**2 + (v[1] - u[1])**2)
 
 class Cam:
     def __init__(self, keypoint_radii, keypoint_range = 1, des_perim = 1) -> None:
@@ -15,7 +11,7 @@ class Cam:
         self.perim = des_perim
 
         # Compute the perimeter of the unscaled cam
-        unscaled_perim = self.r_int_approx(0, 2*np.pi-0.01, 0)
+        unscaled_perim = self.approx_perim(0, 2*np.pi - 0.005)
         # Compute the nessecary scaling to apply in order for the cam to have the desired perimeter
         scale = des_perim/unscaled_perim
 
@@ -52,39 +48,18 @@ class Cam:
         Returns the coordinates of a point at angle alpha on a cam in configuuration gamma, 
         assuming the center of rotation is the origin
         """
-        return self.r(angle)*np.cos(angle+gamma), self.r(angle)*np.sin(angle+gamma)
+        return np.array([self.r(angle)*np.cos(angle+gamma), self.r(angle)*np.sin(angle+gamma)])
 
-    def r_der_approx(self, alpha, gamma, h = 0.00000000001):
+    def approx_tangent(self, alpha, gamma, h = 0.00000000001):
         """
         Simple approximation of the tangent to the cam by selecting two points defined by a very close alpha angle
         """
-        x, y = self.r_cart(alpha, gamma) # pt1
-        x_h, y_h = self.r_cart(alpha+h, gamma) # pt2
+        a = self.r_cart(alpha, gamma) # pt1
+        a_h = self.r_cart(alpha+h, gamma) # pt2
 
-        return (x_h - x)/h, (y_h - y)/h
-    
-    def r_int_approx(self, angle1, angle2, gamma, h = .01):
-        """
-        Returns the approximate arc lenght along a cam in position gamma for angles between alpha1 and alpha2 
-        assuming alpha1 < alpha2
-        """
+        return (a_h - a)/h
 
-        angle1 = angle1 % (2*np.pi)
-        angle2 = angle2 % (2*np.pi)
-
-        if angle1 > angle2:
-            return self.perim - self.r_int_approx(angle2, angle1, gamma, h)
-        else :
-            alpha_vec = np.arange(angle1, angle2, h)[1:]
-            sum = 0
-            for alpha in alpha_vec:
-                pt1 = self.r_cart(alpha, 0)
-                pt2 = self.r_cart(alpha+h, 0)
-
-                sum += norm2(pt1, pt2)
-            return sum
-
-    def get_perim(self, alpha, delta_alpha, h = 0.005):
+    def approx_perim(self, alpha, delta_alpha, h = 0.005):
         """
         Returns the arc lenght on the cam between alpha1 and alpha + delta_alpha. 
         The lenght if signed according to the direct rotation direction
@@ -95,18 +70,16 @@ class Cam:
             pt1 = self.r_cart(alpha, 0)
             pt2 = self.r_cart(alpha+h, 0)
 
-            sum += norm2(pt1, pt2)
+            sum += np.linalg.norm(pt1 - pt2)
 
         return sum
-
-
 
 ## Testing ======
 
 if __name__ == "__main__":
     test_cam = Cam([1, 1, 1.5, 3, 1.7, 1.2, 1], 2.5, 2)
 
-    perim1 = test_cam.get_perim(0, np.pi*2, 0.005)
+    perim1 = test_cam.approx_perim(0, np.pi*2, 0.005)
 
     print(perim1)
 

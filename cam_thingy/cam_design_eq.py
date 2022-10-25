@@ -20,7 +20,7 @@ for gamma in gamma_range:
 
     for alpha in np.arange(-np.pi/4 - gamma, np.pi/2 - gamma, .1)[1:]:
         xa, ya = cam.r_cart(alpha, gamma)
-        xv, yv = cam.r_der_approx(alpha, gamma)
+        xv, yv = cam.approx_tangent(alpha, gamma)
 
         a = np.array([xa, ya])
         v = np.array([xv, yv])
@@ -35,7 +35,7 @@ for gamma in gamma_range:
     xa_min, ya_min = cam.r_cart(alpha_min, gamma)
 
     len1 = norm2((d[0], d[1]), (xa_min, ya_min))
-    len2 = cam.r_int_approx(alpha_min, np.pi, gamma)
+    len2 = cam.perim_approx(alpha_min, np.pi, gamma)
 
     plt_list.append(len1 + len2)
 

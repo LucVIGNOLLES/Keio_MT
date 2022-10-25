@@ -37,12 +37,12 @@ class Actuator:
             steps = steps + 1
 
             # Compute point and tangent
-            xa, ya = self.cam.r_cart(alpha, gamma)
-            xv, yv = self.cam.r_der_approx(alpha, gamma)
+            a = self.cam.r_cart(alpha, gamma)
+            v = self.cam.approx_tangent(alpha, gamma)
 
             # Compute vectors
-            a = np.array([xa, ya, 0])
-            v = np.array([xv, yv, 0])
+            a = np.array([a[0], a[1], 0])
+            v = np.array([v[0], v[1], 0])
             f = np.array([self.xs, self.ys,0])
 
             # Cross product to discriminate
@@ -61,27 +61,6 @@ class Actuator:
 
         return alpha % (2*np.pi)
 
-    def l_out(self, gamma, thresh):
-        """
-        Computes the lenght of cable that would be necessary to go from a specific point 
-        on the cam to the anchored point. 
-        """
-        s = np.array([self.xs, self.ys, 0])
-        alpha_min = self.bisection(gamma, cross_thresh=thresh)
-
-        # Point where the minimum was found (not always the right one)
-        xa_min, ya_min = self.cam.r_cart(alpha_min, gamma)
-
-        # Straight line between the contact point and the anchor.
-        len1 = np.linalg.norm(np.array([s[0], s[1]]) - np.array([xa_min, ya_min])) 
-        #Perimeter on the cam between the contact point and an arbitrary point.
-        len2 = self.cam.r_int_approx(alpha_min, np.pi, gamma, .09)
-
-        return len1 + len2
-
-    def l_out_rel(self, gamma, thresh = 1e-6):
-        return self.l_out(gamma, thresh) - self.l_out(0, thresh)
-
     def delta_l_out(self, gamma, thresh, alpha_min_old):
         """
         """
@@ -89,10 +68,10 @@ class Actuator:
         alpha_min = self.bisection(gamma, alpha_start = alpha_min_old, cross_thresh=thresh)
 
         # Point where the minimum was found (not always the right one)
-        xa_min, ya_min = self.cam.r_cart(alpha_min, gamma)
+        a_min = self.cam.r_cart(alpha_min, gamma)
 
         # Straight line between the contact point and the anchor.
-        len1 = np.linalg.norm(np.array([s[0], s[1]]) - np.array([xa_min, ya_min])) 
+        len1 = np.linalg.norm(np.array([s[0], s[1]]) - a_min) 
 
         # Note: This fix is cursed and will come haunt you and your loved ones one the happiest day of your life
         d_alpha = abs(alpha_min - alpha_min_old)
@@ -100,7 +79,7 @@ class Actuator:
             d_alpha = 2*np.pi - d_alpha
 
         # Compare the position of the new contact point compared to the old one
-        len2 = self.cam.get_perim(alpha_min, d_alpha, 0.001)
+        len2 = self.cam.approx_perim(alpha_min, d_alpha, 0.001)
 
         return len1, len2, alpha_min
 
@@ -154,16 +133,23 @@ if __name__ == "__main__":
     tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
     actu = Actuator.randomCam(20, 3, 0.5, tsa,  0.15, -0.2)
 
+    print(actu.evaluate(0, np.pi, 0.1, np.pi/92))
+
     theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
     X = []
     Y = []
     for theta in theta_vec:
-        x, y = actu.cam.r_cart(theta, 0)
-        X.append(x)
-        Y.append(y)
-
-    print(actu.cam.keypoints)
+        a = actu.cam.r_cart(theta, 0)
+        X.append(a[0])
+        Y.append(a[1])
 
     plt.plot(X,Y)
     plt.plot(0,0, '.')
+
+    alpha = np.pi/4
+
+    x, y = actu.cam.r_cart(alpha,0)
+    dx, dy = actu.cam.approx_tangent(alpha, 0)
+
+    plt.plot([x, x+dx], [y, y+dy], '-')
     plt.show()
