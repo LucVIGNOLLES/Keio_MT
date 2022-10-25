@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from cam_gen import Cam
+from cam import Cam
 
 def norm2(u,v):
     return np.sqrt((v[0] - u[0])**2 + (v[1] - u[1])**2)

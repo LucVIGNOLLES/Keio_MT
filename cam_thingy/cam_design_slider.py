@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
-from cam_gen import Cam
-from cam_contact import bisection
+from cam import Cam
+from archive.cam_contact import bisection
 
 xd, yd = 0.15, -0.2 # Coordinates of the fixed point
 
