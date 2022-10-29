@@ -65,39 +65,91 @@ class Cam:
         The lenght if signed according to the direct rotation direction
         """
         alpha_vec = np.arange(alpha, alpha + delta_alpha, h)[1:]
-        sum = 0
+        sum = []
         for alpha in alpha_vec:
             pt1 = self.r_cart(alpha, 0)
             pt2 = self.r_cart(alpha+h, 0)
 
-            sum += np.linalg.norm(pt1 - pt2)
+            sum.append(np.linalg.norm(pt1 - pt2))
 
-        return sum
+        return np.sum(sum)
 
 ## Testing ======
 
 if __name__ == "__main__":
-    test_cam = Cam([1, 1, 1.5, 3, 1.7, 1.2, 1], 2.5, 2)
+    test_cam = Cam([1, 2, 1, 1, 3, 6, 4, 1], 2, 0.3)
 
-    perim1 = test_cam.approx_perim(0, np.pi*2, 0.005)
+    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
+    print(test_cam.keypoints)
 
-    print(perim1)
+    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
 
-    theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
-    X = []
-    Y = []
-    for theta in theta_vec:
-        x, y = test_cam.r_cart(theta, 0)
-        X.append(x)
-        Y.append(y)
+    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
+    print(test_cam.keypoints)
 
-    n = len(test_cam.keypoints)
+    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
 
-    for i, r in enumerate(test_cam.keypoints):
-        
-        x, y = r * np.cos(i*test_cam.step), r*np.sin(i*test_cam.step)
-        plt.plot(x, y, 'g.')
+    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
+    print(test_cam.keypoints)
 
-    plt.plot(X, Y, '-')
-    plt.plot(0,0, 'r.')
-    plt.show()
+    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
+
+    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
+    print(test_cam.keypoints)
+
+    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
+
+    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
+    print(test_cam.keypoints)
+
+
+    # h = 1e-12
+
+    # theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
+    # X = []
+    # Y = []
+
+    # der = []
+    # der_n = []
+    # R = []
+    # r_n = []
+    # for theta in theta_vec:
+    #     x, y = test_cam.r_cart(theta, 0)
+    #     X.append(x)
+    #     Y.append(y)
+
+    #     r = test_cam.r(theta)
+    #     rh = test_cam.r(theta+h)
+
+    #     dr = (rh - r)/h
+
+    #     dr_n = dr/np.sqrt(dr**2 + r**2)
+
+    #     R.append(r)
+    #     r_n.append(r/np.sqrt(dr**2 + r**2))
+    #     der_n.append(dr_n)
+    #     der.append(dr)
+
+
+    # n = len(test_cam.keypoints)
+
+    # plt.figure(1)
+
+    # xk, yk = [], []
+
+    # for i, r in enumerate(test_cam.keypoints):
+    #     xk.append(r * np.cos(i*test_cam.step))
+    #     yk.append(r*np.sin(i*test_cam.step))
+    # xk.append(test_cam.keypoints[0])
+    # yk.append(0)
+    # plt.plot(xk, yk, 'g.-')
+
+    # plt.plot(X, Y, '-')
+    # plt.plot(0,0, 'r.')
+
+    # plt.figure(2)
+    # plt.plot(theta_vec, r_n, 'b-')
+    # plt.plot(theta_vec, der_n, 'r-')
+    # for i, r in enumerate(test_cam.keypoints):
+    #     plt.plot(i*test_cam.step, 0, '.g')
+    # plt.show()

@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from random import randint
+from random import randint, random
 from cam import Cam
 from tsa import Tsa
+
+def bissect_lenght(a,b,alpha):
+    return a*b/(a+b)*np.sqrt(2*(1+np.cos(2*alpha)))
 
 class Actuator:
     def __init__(self, cam, tsa, x_sep, y_sep) -> None:
@@ -19,6 +22,33 @@ class Actuator:
         cam = Cam(keypoints, blend_range, perim)
 
         return cls(cam, tsa, x_sep, y_sep)
+
+    @classmethod
+    def randomConvexCam(cls, num_iter, blend_range, perim_min, perim_max, tsa, x_sep, y_sep):
+        keypoints = []
+        for i in range(4):
+            keypoints.append(randint(50, 80))
+
+        for _ in range(num_iter):
+            n = len(keypoints)
+            new_kpts = []
+            for i in range(n):
+                new_kpts.append(keypoints[i])
+                if i < n-1:
+                    b = int(bissect_lenght(keypoints[i],keypoints[i+1],np.pi/n))
+                else:
+                    b = int(bissect_lenght(keypoints[n-1],keypoints[0],np.pi/n)) 
+                new_kpts.append(randint(int(1.05*b), int(1.3*b)))
+            keypoints = new_kpts
+        
+        cam = Cam(keypoints, blend_range, perim_min + random()*(perim_max - perim_min))
+        return cls(cam, tsa, x_sep, y_sep)
+
+    def __ge__(self, other):
+        return True
+
+    def __lt__(self, other):
+        return True
 
     def bisection(self, gamma, alpha_min = -2*np.pi, alpha_max = 4*np.pi, alpha_start = np.pi/4, cross_thresh = 1e-5, max_step = 1000):
         """
@@ -94,7 +124,7 @@ class Actuator:
 
         # Keep the initial lenght of string between the separator and the contact point on the cam
         # It will be subtracted from the other values so that we start at 0
-        l1_0, _, _ = self.delta_l_out(gamma0, 1e-6, 0)
+        l1_0, _, _ = self.delta_l_out(gamma0, 1e-7, 0)
 
         # Find the contact point in the initial configuration
         alpha_min = self.bisection(gamma0)
@@ -111,13 +141,17 @@ class Actuator:
 
         return theta_lst, gamma_range
 
-    def evaluate(self, gamma0, gammam, step_sz, goal_coeff):
+    def evaluate(self, gamma0, gammam, step_sz, goal_coeff, show = False, save = False, save_label = 'default.png'):
         """
-        The steps are compared to the goal steps calcualated from the goal coeff c as gamma = c*theta
+        First, the mean coeeficient is computed.
+        Then, the individual steps are compared to the goal steps calcualated from the goal coeff c as gamma = c*theta
+        The output is shaped so that the mean slope has a bigger priority
         The returned value gets closer to 0 as the curve gets more linear
         """
-        theta_lst, _ = self.run(gamma0, gammam, step_sz)
+        theta_lst, gamma_lst = self.run(gamma0, gammam, step_sz)
 
+        # Error on the mean coefficient
+        coeff_error = abs((gammam - gamma0)/(theta_lst[-1] - theta_lst[0]) - goal_coeff)
         # Evaluate using the list of corresponding theta angles for evenly spaced gamma positions
         deviation = 0
         goal_step = step_sz/goal_coeff
@@ -125,16 +159,22 @@ class Actuator:
         for i in range(len(theta_lst)-1):
             deviation += (goal_step - abs(theta_lst[i+1] - theta_lst[i]))**2
 
-        return deviation
 
-## Testing ======
+        # Part for saving the graph of theta against gamma if parameters are specified
+        if show or save:
+            plt.plot(gamma_lst, theta_lst)
+            plt.text(3, 8, str(deviation), style='italic',
+            bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10})
+        if show:
+            plt.show()
+        if save:
+            plt.savefig(save_label)
 
-if __name__ == "__main__":
-    tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
-    actu = Actuator.randomCam(20, 3, 0.5, tsa,  0.15, -0.2)
+        return (coeff_error) + deviation/(10*coeff_error+1)
 
-    print(actu.evaluate(0, np.pi, 0.1, np.pi/92))
-
+def plot_actu(actu, step, score):
+    plt.figure(step)
+    plt.xlabel(str(score))
     theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
     X = []
     Y = []
@@ -151,5 +191,105 @@ if __name__ == "__main__":
     x, y = actu.cam.r_cart(alpha,0)
     dx, dy = actu.cam.approx_tangent(alpha, 0)
 
+    xk, yk = [], []
+
+    for i, r in enumerate(actu.cam.keypoints):
+        xk.append(r * np.cos(i*actu.cam.step))
+        yk.append(r*np.sin(i*actu.cam.step))
+    xk.append(actu.cam.keypoints[0])
+    yk.append(0)
+    plt.plot(xk, yk, 'g.-')
+
     plt.plot([x, x+dx], [y, y+dy], '-')
-    plt.show()
+    plt.savefig('figs/step' + str(step) + '.png')
+
+## Testing ======
+
+if __name__ == "__main__":
+    tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
+    cam = Cam([0.0353073,  0.02154633, 0.04082978, 0.02829124, 0.04170028, 0.03152643, 0.03624375, 0.02835085], 2, 0.20758216488076991)
+    actu = Actuator(cam, tsa, 0.15, -0.2)
+
+    gamma_lst = np.arange(0, np.pi, 0.1)
+    theta_opt_lst = []
+    for gamma in gamma_lst:
+        theta_opt_lst.append(92/np.pi*gamma)
+
+    plt.plot(gamma_lst, theta_opt_lst)
+
+    print(actu.evaluate(0,np.pi, 0.1, np.pi/92, True))
+
+
+    # #print(actu.evaluate(0, np.pi, 0.1, np.pi/92))
+
+    # plt.figure(1)
+
+    # theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
+    # X = []
+    # Y = []
+    # for theta in theta_vec:
+    #     a = actu.cam.r_cart(theta, 0)
+    #     X.append(a[0])
+    #     Y.append(a[1])
+
+    # plt.plot(X,Y)
+    # plt.plot(0,0, '.')
+
+    # alpha = np.pi/4
+
+    # x, y = actu.cam.r_cart(alpha,0)
+    # dx, dy = actu.cam.approx_tangent(alpha, 0)
+
+    # xk, yk = [], []
+
+    # for i, r in enumerate(actu.cam.keypoints):
+    #     xk.append(r * np.cos(i*actu.cam.step))
+    #     yk.append(r*np.sin(i*actu.cam.step))
+    # xk.append(actu.cam.keypoints[0])
+    # yk.append(0)
+    # plt.plot(xk, yk, 'g.-')
+
+    # plt.plot([x, x+dx], [y, y+dy], '-')
+
+    # plt.figure(2)
+
+    # actu = mutate(actu, 0.2)
+
+    # theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
+    # X = []
+    # Y = []
+    # for theta in theta_vec:
+    #     a = actu.cam.r_cart(theta, 0)
+    #     X.append(a[0])
+    #     Y.append(a[1])
+
+    # plt.plot(X,Y)
+    # plt.plot(0,0, '.')
+
+    # alpha = np.pi/4
+
+    # x, y = actu.cam.r_cart(alpha,0)
+    # dx, dy = actu.cam.approx_tangent(alpha, 0)
+
+    # xk, yk = [], []
+
+    # for i, r in enumerate(actu.cam.keypoints):
+    #     xk.append(r * np.cos(i*actu.cam.step))
+    #     yk.append(r*np.sin(i*actu.cam.step))
+    # xk.append(actu.cam.keypoints[0])
+    # yk.append(0)
+    # plt.plot(xk, yk, 'g.-')
+
+    # plt.plot([x, x+dx], [y, y+dy], '-')
+    # plt.show()
+
+
+    #TODO : find an upper limit for the new points raduis that depends on the current step angle 
+    # The narrower the angle, the lower the limit should be 
+
+    # doing it approximately might be good enought depending on the evolutive strategy we choose
+    # e.g., at each generation, survivors are mutated by sequantially selecting a few keypoints to modify
+    # If that keypoint is short compared to its neighbours, it is mutated to get longer
+    # Else it is mutated to get shorter (slightly in each case)
+
+    # This way the cam should stay pretty convex at is evolves.
