@@ -10,6 +10,10 @@ from functools import partial
 # This approach did not work last time i tried, but it might still be worth a try with the force linearization
 
 def adapt_perim_dir(actu, gamma0, gammam, step_sz, goal_coeff, h, base_value):
+    """
+    Finds if th eperimeter needs tobe increased or decreased in order to improve the score 
+    Not very evolved though, proportions could be improved
+    """
     new_perim = actu.cam.perim + actu.cam.perim*h
 
     actu.cam = Cam(actu.cam.keypoints, 2, new_perim)
@@ -19,12 +23,19 @@ def adapt_perim_dir(actu, gamma0, gammam, step_sz, goal_coeff, h, base_value):
     return base_value - new_val
 
 def get_mod_value(actu, gamma0, gammam, step_sz, goal_coeff, h, base_value, i):
+    """
+    Finds the influence of increasing a keypoints distance ont the score. 
+    Gives a positive value if yes, and a negative one if no
+    """
     new_kpts =  actu.cam.keypoints
     new_kpts[i] = actu.cam.keypoints[i] + actu.cam.keypoints[i]*h
     new_actu = Actuator(Cam(new_kpts, 2, actu.cam.perim), actu.tsa, actu.xs, actu.ys)
     return base_value - new_actu.evaluate(gamma0, gammam, step_sz, goal_coeff)
 
 def find_downhill_vector(actu, gamma0, gammam, step_sz, goal_coeff, h, base_value):
+    """
+    Gets the influence of modifying each keypoint and stores it into an array to be used as a direction for modifying the cam shape
+    """
     values = []
     with Pool(len(actu.cam.keypoints)) as p:
         values = p.map(partial(get_mod_value, actu, gamma0, gammam, step_sz, goal_coeff, h, base_value), range(len(actu.cam.keypoints)))
@@ -35,6 +46,9 @@ def find_downhill_vector(actu, gamma0, gammam, step_sz, goal_coeff, h, base_valu
     return direction
 
 def minimize(actu, gamma0, gammam, step_sz, goal_coeff, h, evol_ratio1, evol_ratio2, num_steps):
+    """
+    Sequencially modifies the perimeter and the keypoints a number of times in order to try to decrease the score value
+    """
     for k in range(num_steps):
         print("====> Performing step",  k+1)
         val = actu.evaluate(gamma0, gammam, step_sz, goal_coeff)
