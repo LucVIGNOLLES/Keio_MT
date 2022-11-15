@@ -26,7 +26,7 @@ class Actuator:
     @classmethod
     def randomConvexCam(cls, num_iter, blend_range, perim_min, perim_max, tsa, x_sep, y_sep):
         keypoints = []
-        for i in range(4):
+        for i in range(6):
             keypoints.append(randint(50, 80))
 
         for _ in range(num_iter):
@@ -141,7 +141,37 @@ class Actuator:
 
         return theta_lst, gamma_range
 
-    def evaluate(self, gamma0, gammam, step_sz, goal_coeff, show = False, save = False, save_label = 'default.png'):
+    def run_force(self, gamma0, gammam, step_sz):
+        """
+        Compute a tab of gamma vs theta values to be evaluated for linearity
+        """
+        # Containers
+        gamma_range = np.arange(gamma0, gammam, step_sz)
+        theta_lst = []
+        alpha_lst = []
+        l_out = 0
+
+        # Keep the initial lenght of string between the separator and the contact point on the cam
+        # It will be subtracted from the other values so that we start at 0
+        l1_0, _, _ = self.delta_l_out(gamma0, 1e-7, 0)
+
+        # Find the contact point in the initial configuration
+        alpha_min = self.bisection(gamma0)
+
+        # For all configurations to be tested
+        for gamma in gamma_range:
+            alpha_lst.append(alpha_min)
+            # Get the lenghts and the contact point
+            l1, delta_l2, alpha_min_new = self.delta_l_out(gamma, 1e-7, alpha_min)
+            # Add the rolled lenght to keep track of the total
+            l_out = l_out + delta_l2
+            #print(delta_l2, "; ",l_out, "; ", alpha_min_new, "; ", alpha_min)
+            alpha_min = alpha_min_new
+            theta_lst.append(self.tsa.theta(l_out + l1 - l1_0))
+
+        return theta_lst, gamma_range, alpha_lst
+
+    def evaluate(self, gamma0, gammam, step_sz, goal_coeff, return_lists = False):
         """
         First, the mean coeeficient is computed.
         Then, the individual steps are compared to the goal steps calcualated from the goal coeff c as gamma = c*theta
@@ -159,18 +189,22 @@ class Actuator:
         for i in range(len(theta_lst)-1):
             deviation += (goal_step - abs(theta_lst[i+1] - theta_lst[i]))**2
 
+        if return_lists:
+            return (coeff_error) + deviation/(100*coeff_error+1), gamma_lst, theta_lst
+        else:
+            return (coeff_error) + deviation/(10*coeff_error+1)
 
-        # Part for saving the graph of theta against gamma if parameters are specified
-        if show or save:
-            plt.plot(gamma_lst, theta_lst)
-            plt.text(3, 8, str(deviation), style='italic',
-            bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 10})
-        if show:
-            plt.show()
-        if save:
-            plt.savefig(save_label)
+    def evaluate_force(self, gamma0, gammam, step_sz, goal_coeff, return_lists = False):
+        theta_lst, gamma_lst, alpha_lst = self.run_force(gamma0, gammam, step_sz)
+        reduc_ratio_lst = [self.tsa.reduction_ratio(theta) for theta in theta_lst]
+        lever_arm_lst = [self.cam.lever_arm(alpha) for alpha in alpha_lst]
 
-        return (coeff_error) + deviation/(10*coeff_error+1)
+        error_lst = [(l*h-goal_coeff)**2 for l,h in zip(lever_arm_lst, reduc_ratio_lst)]
+
+        if return_lists:
+            return np.sum(error_lst), gamma_lst, [l*h for l,h in zip(lever_arm_lst, reduc_ratio_lst)]
+        else:
+            return np.sum(error_lst)
 
 def plot_actu(actu, step, score):
     plt.figure(step)
@@ -207,81 +241,22 @@ def plot_actu(actu, step, score):
 
 if __name__ == "__main__":
     tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
-    cam = Cam([0.0353073,  0.02154633, 0.04082978, 0.02829124, 0.04170028, 0.03152643, 0.03624375, 0.02835085], 2, 0.20758216488076991)
-    actu = Actuator(cam, tsa, 0.15, -0.2)
+    cam = Cam([ 0.00030073,  0.00061142,  0.0038354 ,  0.00533471, -0.2093996,   0.00554317, 0.00269605,  0.00106082], 2, 0.3)
+    
+    actu = Actuator(cam, tsa, 0.2, -0.15)
 
-    gamma_lst = np.arange(0, np.pi, 0.1)
-    theta_opt_lst = []
-    for gamma in gamma_lst:
-        theta_opt_lst.append(92/np.pi*gamma)
+    plt.figure(1)
 
-    plt.plot(gamma_lst, theta_opt_lst)
+    X = []
+    Y = []
+    alpha_range = np.arange(0,2*np.pi, 0.1)
+    for alpha in alpha_range:
+        x,y = actu.cam.r_cart(alpha, 0)
+        X.append(x)
+        Y.append(y)
 
-    print(actu.evaluate(0,np.pi, 0.1, np.pi/92, True))
-
-
-    # #print(actu.evaluate(0, np.pi, 0.1, np.pi/92))
-
-    # plt.figure(1)
-
-    # theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
-    # X = []
-    # Y = []
-    # for theta in theta_vec:
-    #     a = actu.cam.r_cart(theta, 0)
-    #     X.append(a[0])
-    #     Y.append(a[1])
-
-    # plt.plot(X,Y)
-    # plt.plot(0,0, '.')
-
-    # alpha = np.pi/4
-
-    # x, y = actu.cam.r_cart(alpha,0)
-    # dx, dy = actu.cam.approx_tangent(alpha, 0)
-
-    # xk, yk = [], []
-
-    # for i, r in enumerate(actu.cam.keypoints):
-    #     xk.append(r * np.cos(i*actu.cam.step))
-    #     yk.append(r*np.sin(i*actu.cam.step))
-    # xk.append(actu.cam.keypoints[0])
-    # yk.append(0)
-    # plt.plot(xk, yk, 'g.-')
-
-    # plt.plot([x, x+dx], [y, y+dy], '-')
-
-    # plt.figure(2)
-
-    # actu = mutate(actu, 0.2)
-
-    # theta_vec = np.arange(0, 2 * np.pi+0.05, .02)[1:]
-    # X = []
-    # Y = []
-    # for theta in theta_vec:
-    #     a = actu.cam.r_cart(theta, 0)
-    #     X.append(a[0])
-    #     Y.append(a[1])
-
-    # plt.plot(X,Y)
-    # plt.plot(0,0, '.')
-
-    # alpha = np.pi/4
-
-    # x, y = actu.cam.r_cart(alpha,0)
-    # dx, dy = actu.cam.approx_tangent(alpha, 0)
-
-    # xk, yk = [], []
-
-    # for i, r in enumerate(actu.cam.keypoints):
-    #     xk.append(r * np.cos(i*actu.cam.step))
-    #     yk.append(r*np.sin(i*actu.cam.step))
-    # xk.append(actu.cam.keypoints[0])
-    # yk.append(0)
-    # plt.plot(xk, yk, 'g.-')
-
-    # plt.plot([x, x+dx], [y, y+dy], '-')
-    # plt.show()
+    plt.plot(X,Y)
+    plt.show()
 
 
     #TODO : find an upper limit for the new points raduis that depends on the current step angle 

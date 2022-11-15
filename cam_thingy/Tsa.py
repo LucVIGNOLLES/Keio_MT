@@ -50,11 +50,14 @@ class Tsa:
         """
         return self.theta(h) - theta_0
 
+    def reduction_ratio(self, theta):
+        return self.d/(self.r0*(self.sa + self.sb + self.r0*theta))
+
 
 # Testing =====
 
 if __name__ == "__main__":
-    actuator = Tsa(0.3, 0.003, 0.01, 0.01, 1)
+    actuator = Tsa(0.3, 0.006, 0.03, 0.03, 1)
     print(actuator.theta_max)
 
     theta_list = np.arange(0, actuator.theta_max + 10, 0.1)
@@ -62,12 +65,18 @@ if __name__ == "__main__":
     ld_list = []
     t_list = []
 
+    r_list = [actuator.reduction_ratio(theta) for theta in theta_list]
+
     for theta in theta_list:
         l_list.append(actuator.h(theta)- actuator.h(0))
         ld_list.append(actuator.len_der(theta))
         t_list.append(actuator.theta(actuator.h(theta)))
 
-    plt.plot(theta_list/(2*np.pi), l_list)  
+    plt.plot(theta_list, r_list)
+    plt.plot(actuator.theta_max, 0, '.r')
+    plt.plot()
+
+    #plt.plot(theta_list/(2*np.pi), l_list)  
     #plt.plot(theta_list/(2*np.pi), ld_list)
     #plt.plot(theta_list, t_list, '.')
     plt.show()

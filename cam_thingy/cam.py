@@ -20,7 +20,7 @@ class Cam:
 
     def blend_custom(self, angle, k, range):
         """
-        Uses the blend function to determine the summinf coefficient for each keypoint of the cam at a given angle.
+        Uses the blend function to determine the summing coefficient for each keypoint of the cam at a given angle.
         The range variable allows to choose how far each keypoint can affect its neighbors
         """
         angle = angle%(2*np.pi) # Bring angle back in the [0, 2pi] interval
@@ -42,6 +42,9 @@ class Cam:
         Elementwise multiplication of weights and values, summed to obtain the final radius at a given angle
         """
         return np.sum(self.keypoints * self.blend_vector(angle))
+
+    def r_dot(self, angle, h):
+        return (self.r(angle+h) - self.r(angle))/h
 
     def r_cart(self, angle, gamma):
         """
@@ -74,34 +77,27 @@ class Cam:
 
         return np.sum(sum)
 
+    def lever_arm(self, alpha):
+        # pure derivatire of r(alpha) is  needed for this computation.
+        # Might be more efficicent to know the analytic expression
+        return (self.r(alpha)**2)/np.sqrt(self.r_dot(alpha, 1e-12)**2 + self.r(alpha)**2)
+
 ## Testing ======
 
 if __name__ == "__main__":
-    test_cam = Cam([1, 2, 1, 1, 3, 6, 4, 1], 2, 0.3)
 
-    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
-    print(test_cam.keypoints)
+    amp = 0.2
+    angle = 0
+    offset = 2
+    scale = 2
 
-    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
+    X = np.arange(0,2*np.pi, 0.1)
+    Y = [amp*blend_func(x, offset, scale) + 1 for x in X]
 
-    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
-    print(test_cam.keypoints)
+    plt.plot(X,Y)
+    plt.show()
 
-    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
-
-    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
-    print(test_cam.keypoints)
-
-    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
-
-    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
-    print(test_cam.keypoints)
-
-    test_cam = Cam(test_cam.keypoints, 2, test_cam.perim)
-
-    print(test_cam.approx_perim(0, 2*np.pi-0.005, 0.005))
-    print(test_cam.keypoints)
-
+    # test_cam = Cam([1,1,1,1], 2, 0.5)
 
     # h = 1e-12
 

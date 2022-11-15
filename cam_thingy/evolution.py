@@ -1,18 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import os
+import time
+
 from multiprocessing import Pool
 from functools import partial
 from random import randint, random, sample
+
 from cam import Cam
 from tsa import Tsa
 from actuator import Actuator, bissect_lenght
+
 
 
 def evaluate_individual(gamma0, gammam, step_sz, goal_coeff, indiv):
     """
     Method to be called in a multiprocessing pool 
     """
-    return indiv.evaluate(gamma0, gammam, step_sz, goal_coeff)
+    return indiv.evaluate(gamma0, gammam, step_sz, goal_coeff, True)
 
 def mutate(actuator, rate_per_kpt, perim_rate):
     """
@@ -39,9 +45,9 @@ def mutate(actuator, rate_per_kpt, perim_rate):
 
         # Performing mutation by taking into account the bissecting lenght 
         if r < rate_per_kpt and kpt < b:
-            new_kpt = kpt + randint(0,70)/1000*kpt
+            new_kpt = kpt + randint(0,150)/1000*kpt
         elif r < rate_per_kpt and kpt >= b:
-            new_kpt = kpt - randint(0,70)/1000*kpt
+            new_kpt = kpt - randint(0,100)/1000*kpt
         else: 
             new_kpt = kpt
 
@@ -74,15 +80,12 @@ def mate(actu1, actu2):
 class Population:
     def __init__(self, population_sz) -> None:
         self.pop_size = population_sz # Will be cropped to the nearest lower 4 multiple in the repopulation process
-        self.individuals = []
-        self.gen = 0
-
         tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
-
-        for _ in range(population_sz):
-            self.individuals.append(Actuator.randomConvexCam(1, 2, 0.2, 0.5, tsa,  0.15, -0.2))
-
+        self.individuals = [Actuator.randomConvexCam(1, 2, 0.2, 0.5, tsa,  0.15, -0.2) for i in range(population_sz)]
         self.scores = np.zeros_like(self.individuals)
+        self.all_gamma_lst = [[]]
+        self.all_theta_lst = [[]]
+        self.gen = 1
 
     #TODO: Add a method to specify a base individual and heavily mutate it to generate the base population 
     # (better if we already have a good candidate)
@@ -93,7 +96,11 @@ class Population:
         The evaluate_indiv function is called for that purpose
         """
         with Pool(self.pop_size) as p:
-            self.scores = p.map(partial(evaluate_individual, 0, np.pi, 0.1, np.pi/92), self.individuals)
+            pack = p.map(partial(evaluate_individual, 0, np.pi, 0.1, np.pi/92), self.individuals)
+
+        self.scores = [s[0] for s in pack]
+        self.all_gamma_lst = [s[1] for s in pack]
+        self.all_theta_lst = [s[2] for s in pack]
 
     def select_and_repopulate(self, kpt_mutation_rate, perim_mut_rate):
         """
@@ -124,13 +131,99 @@ class Population:
         """
         Main method for Population class
         """
+        str_current_datetime = time.strftime("%Y%m%d_%H%M%S")
+        os.mkdir(os.getcwd() + '/results/'+ str_current_datetime)
+
+        score_history = [[s] for s in self.scores]
+
+        # to run GUI event loop
+        plt.ion()
+        
+        # here we are creating sub plots
+        fig = plt.figure(tight_layout=True)
+        gs = gridspec.GridSpec(2, 2)
+
+        ax1 = fig.add_subplot(gs[0,:])
+
+        ax1.set_xlim(1, num_gen)
+        ax1.set_ylim(0,150)
+        lines = [ax1.plot(range(self.gen), self.scores[i])[0] for i in range(self.pop_size)]
+        
+        # setting title
+        plt.title("Cam evolution", fontsize=20)
+        
+        # setting x-axis label and y-axis label
+        ax1.set_xlabel("Generation")
+        ax1.set_ylabel("Scores")
+
+        X, Y = [], []
+        
+        ax2 = fig.add_subplot(gs[1,0])
+        for theta in np.arange(0, np.pi*2, 0.1):
+            x, y = self.individuals[0].cam.r_cart(theta, 0)
+            X.append(x)
+            Y.append(y)
+
+        cam_line, = ax2.plot(X, Y)
+        center_pt, = ax2.plot(0,0, '.r')
+
+        ax3 = fig.add_subplot(gs[1,1])
+
+        ax3.set_xlim(0, np.pi)
+        ax3.set_ylim(0, 120)
+
+        ref_line, = ax3.plot(0,0)
+        test_line, = ax3.plot(0,0)
+
         for _ in range(num_gen):
             self.test()
             self.select_and_repopulate(kpt_mutation_rate, perim_mut_rate)
-            self.gen += 1
             print(">> gen : ", self.gen,"; best_score : ", min(self.scores))
             print(["%.2f" % x for x in self.scores])
             print(" ")
+
+            for i, score in enumerate(self.scores):
+                score_history[i].append(score)
+                lines[i].set_xdata(range(self.gen+1))
+                lines[i].set_ydata(score_history[i])
+
+            X, Y = [], []
+        
+            for theta in np.arange(0, np.pi*2, 0.1):
+                x, y = self.individuals[0].cam.r_cart(theta, 0)
+                X.append(x)
+                Y.append(y)
+
+            cam_line.set_xdata(X)
+            cam_line.set_ydata(Y)
+
+            ax2.set_aspect('equal')
+
+            ref_line.set_xdata(self.all_gamma_lst[0])
+            ref_line.set_ydata([92/np.pi*gamma for gamma in self.all_gamma_lst[0]])
+
+            test_line.set_xdata(self.all_gamma_lst[0])
+            test_line.set_ydata(self.all_theta_lst[0])
+                
+            fig.canvas.draw()
+ 
+            # This will run the GUI event
+            # loop until all UI events
+            # currently waiting have been processed
+            fig.canvas.flush_events()
+
+            fig.savefig('results/'+str_current_datetime+'/fig_gen_'+str(self.gen)+'.png')
+
+            # Write to file
+
+            with open('results/'+str_current_datetime+'/run.txt', 'a') as f:
+                f.write('Generation ' + str(self.gen) + '\n')
+                f.write('========' + '\n')
+                for i, indiv in enumerate(self.individuals):
+                    f.write(str(indiv.cam.keypoints) + ' ; ' + str(indiv.cam.perim) + ' ; ' + str(self.scores[i]) + '\n')
+                f.write('========' + '\n\n')
+
+            self.gen += 1
 
         return self.individuals[0]
 
@@ -149,9 +242,9 @@ if __name__ == "__main__":
 
     # print(val)
 
-    pop = Population(12) # Size must be dividable by 4
+    pop = Population(16) # Size must be dividable by 4
 
-    actu = pop.evolve(60, 0.2, 0.1)
+    actu = pop.evolve(20, 0.5, 0.7)
 
     print(actu.cam.keypoints)
     print(actu.cam.perim)
