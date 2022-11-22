@@ -50,17 +50,19 @@ def minimize(actu, gamma0, gammam, step_sz, goal_coeff, h, evol_ratio1, evol_rat
     Sequencially modifies the perimeter and the keypoints a number of times in order to try to decrease the score value
     """
     for k in range(num_steps):
-        # print("====> Performing step",  k+1)
-        # val = actu.evaluate_force(gamma0, gammam, step_sz, goal_coeff)
-        # print(">> All changes val :", val)
+        print("====> Performing step",  k+1)
+        val = actu.evaluate_force(gamma0, gammam, step_sz, goal_coeff)
+        print(">> All changes val :", val)
 
-        # perim_dir = adapt_perim_dir(actu, gamma0, gammam, step_sz, goal_coeff, h, val)
-        # new_cam = Cam(actu.cam.keypoints, 2, actu.cam.perim + actu.cam.perim*perim_dir*evol_ratio1)
+        perim_dir = adapt_perim_dir(actu, gamma0, gammam, step_sz, goal_coeff, h, val)
+        new_cam = Cam(actu.cam.keypoints, 2, actu.cam.perim + actu.cam.perim*perim_dir*evol_ratio1)
 
-        # actu.cam = new_cam
+        actu = Actuator(new_cam, actu.tsa, actu.xs, actu.ys)
 
         val = actu.evaluate_force(gamma0, gammam, step_sz, goal_coeff)
         dir = find_downhill_vector(actu, gamma0, gammam, step_sz, goal_coeff, h, val)
+
+        print(dir)
 
         new_keypoints = []
         
@@ -69,22 +71,21 @@ def minimize(actu, gamma0, gammam, step_sz, goal_coeff, h, evol_ratio1, evol_rat
 
         new_cam = Cam(new_keypoints, 2, actu.cam.perim)
 
-        actu.cam = new_cam
-
-        plot_actu(actu, k+1, val)
         print(">> Perim change val : ", val, "; Perimeter : ", actu.cam.perim)
         print("  ")
-    return actu    
+
+        actu = Actuator(new_cam, actu.tsa, actu.xs, actu.ys) 
+    return actu
 
 ## Main ======
 
 if __name__ == "__main__":
     tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
-    cam = Cam([2, 3, 7, 9, 10, 10, 5, 2], 2, 0.3)
+    cam = Cam([0.01088736, 0.00902949, 0.00940026, 0.01240981, 0.01975054, 0.03287334, 0.04894144, 0.06176267, 0.06186754, 0.0451291, 0.03005022, 0.01838828], 2, 0.21948481997605881)
     actu = Actuator(cam, tsa, 0.15, -0.2)
 
     # dir = find_downhill_vector(actu, 0, np.pi, 0.1, np.pi/92, 0.001)
     # print(dir)
 
-    actu = minimize(actu, 0, np.pi, 0.1, np.pi/92, 1e-6, 0.5, 0.01, 20)
+    actu = minimize(actu, 0, np.pi, 0.1, 20, 1e-6, 0.05, 0.001, 20)
     print(actu.cam.keypoints)

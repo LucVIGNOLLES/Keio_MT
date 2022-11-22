@@ -80,7 +80,7 @@ class Cam:
     def lever_arm(self, alpha):
         # pure derivatire of r(alpha) is  needed for this computation.
         # Might be more efficicent to know the analytic expression
-        return (self.r(alpha)**2)/np.sqrt(self.r_dot(alpha, 1e-12)**2 + self.r(alpha)**2)
+        return (self.r(alpha)**2)/np.sqrt(self.r_dot(alpha, 1e-9)**2 + self.r(alpha)**2)
 
 ## Testing ======
 

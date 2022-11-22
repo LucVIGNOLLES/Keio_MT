@@ -241,21 +241,12 @@ def plot_actu(actu, step, score):
 
 if __name__ == "__main__":
     tsa = Tsa(0.2, 0.003, 0.01, 0, 1)
-    cam = Cam([ 0.00030073,  0.00061142,  0.0038354 ,  0.00533471, -0.2093996,   0.00554317, 0.00269605,  0.00106082], 2, 0.3)
+    cam = Cam([0.01567108, 0.01228622, 0.01430292, 0.01708767, 0.02457278, 0.03650728, 0.04674677, 0.05588914, 0.05855479, 0.05288107, 0.03709499, 0.02514716], 2, 0.22942268972602545)
     
     actu = Actuator(cam, tsa, 0.2, -0.15)
 
-    plt.figure(1)
-
-    X = []
-    Y = []
-    alpha_range = np.arange(0,2*np.pi, 0.1)
-    for alpha in alpha_range:
-        x,y = actu.cam.r_cart(alpha, 0)
-        X.append(x)
-        Y.append(y)
-
-    plt.plot(X,Y)
+    t, g, a = actu.run_force(0, 2*np.pi, 0.1)
+    plt.plot(t, a)
     plt.show()
 
 
