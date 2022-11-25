@@ -2,29 +2,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import root_scalar
 from time import perf_counter
+from math import atan2
+
+plt.style.use('dark_background')
 
 # TSA parameters
-D = 0.2
-R0 = 0.0015
+D = 0.15
+R0 = 0.001
 A = 0.1
 B = 0.0
 
 # optimization parameters
 XI = 30
 
-THETA0 = 15 * 2*np.pi
-THETAM = 30 * 2*np.pi
-THETA_STEP = 0.01
+THETA0 = 0 * 2*np.pi
+THETAM = 15 * 2*np.pi
+THETA_STEP = 15* 2 * np.pi/100
 
 GAMMA_STEP = 1/XI * THETA_STEP
 
 # Test variables
 P = np.array([0.05, 0])
 T = np.array([-2,-1])/np.linalg.norm([-2,-1])
-SD = 0.2
+SD = 0.1
 S = np.array([0, SD])
 
-Y0 = 0.02
+Y0 = 0.01
 
 # Work around the unreachable code error
 cross = lambda x,y:np.cross(x,y)
@@ -66,7 +69,6 @@ if __name__ == "__main__":
 
     p_list = [p]
     t_list = [t]
-    a_list = [0]
 
     for theta in np.arange(THETA0, THETAM, THETA_STEP):
         p = rotate(p, GAMMA_STEP)
@@ -76,14 +78,16 @@ if __name__ == "__main__":
 
         p_list.append(p)
         t_list.append(t)
-        a_list.append(a)
 
-    pp_list = []
+    pp_list = [rotate(p, -i*GAMMA_STEP) for i, p in enumerate(p_list)]
 
-    for i, p in enumerate(p_list):
-        pp_list.append(rotate(p, -i*GAMMA_STEP))
+    # r_list = [np.linalg.norm(pp) for pp in pp_list]
+    # a_list = [atan2(pp[1], pp[0]) for pp in pp_list]
 
     fig, ax = plt.subplots()
+
+    # plt.plot(a_list, r_list)
+    # plt.show()
 
     ax.plot(0,0,'r.')
     ax.plot(0,SD, 'g.')
@@ -92,5 +96,9 @@ if __name__ == "__main__":
     ax.grid()
     ax.set_aspect('equal')
     plt.show()
+
+    with open("cam_outline.txt", 'w') as f:
+        for p in pp_list:
+            f.write(str(1000*p[0]) + ' ' + str(1000*p[1]) + ' ' + str(0) + '\n')
 
 
