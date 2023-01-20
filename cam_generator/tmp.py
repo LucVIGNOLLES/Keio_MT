@@ -1,32 +1,33 @@
-# p0 = np.array([equal_moment_x(0.08, h_fun(THETA0)), 0.08])
-# t0 = (p0-S)/np.linalg.norm(p0-S)
+import numpy as np
+import matplotlib.pyplot as plt
 
-# gamma = 0
-# gamma_list = [gamma]
+from main import Cam, Y0, S, THETA0, THETAM, THETA_STEP, XI, SD
 
-# p0p = rotate(p0, GAMMA_STEP)
-# t0p = rotate(t0, GAMMA_STEP)
+GAMMA = np.pi/5
 
-# y_array0 = np.arange(-0.1, 0.2, 0.01)
-# x_array0 = [equal_moment_x(y, h_fun(THETA0)) for y in y_array0]
+cam = Cam(Y0, S, THETA0, THETAM, THETA_STEP, XI)
 
-# y_array1 = np.arange(-0.1, 0.2, 0.01)
-# x_array1 = [equal_moment_x(y, h_fun(THETA0 + THETA_STEP)) for y in y_array0]
+print(cam.equivalent_angle(0.14, 0.01))
 
-# p1, t1, a = new_pt_tan_and_angle(p0p, t0p, h_fun(THETA0 + THETA_STEP))
+def show_cam(cam):
+    fig, ax = plt.subplots()
 
-# plt.plot(0,0.2, '.')
+    # plt.plot(a_list, r_list)
+    # plt.show()
 
-# plt.plot(x_array0, y_array0, linestyle = 'dashed')
-# plt.plot(x_array1, y_array1, linestyle = 'dashed')
+    ax.plot(0,0,'r.')
+    ax.plot(0,SD, 'g.')
 
-# plt.plot(p0[0], p0[1], '.')
-# plt.plot([p0[0], p0[0] + t0[0]], [p0[1], p0[1] + t0[1]])
+    ax.plot([pp[0] for pp in cam.ptsRotated(GAMMA)], [pp[1] for pp in cam.ptsRotated(GAMMA)])
+    ax.plot(cam.ptsRotated(GAMMA)[idx][0], cam.ptsRotated(GAMMA)[idx][1], 'o')
+    ax.grid()
+    ax.set_aspect('equal')
+    plt.show()
 
-# plt.plot(p0p[0], p0p[1], '.')
-# plt.plot([p0p[0], p0p[0] + t0p[0]], [p0p[1], p0p[1] + t0p[1]])
+l_list = []
+for gamma in np.arange(0, np.pi, 0.01):
+    l, idx = cam.equivalent_string_lenght(gamma)
+    l_list.append(l)
 
-# plt.plot(p1[0], p1[1], '.')
-
-# plt.grid()
-# plt.show()     
+plt.plot(np.arange(0, np.pi, 0.01), l_list, '-')
+plt.show()
