@@ -1,33 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from math import sqrt
 
-from main import Cam, Y0, S, THETA0, THETAM, THETA_STEP, XI, SD
+from cam_gen import Cam, D, A, B, R0
 
-GAMMA = np.pi/5
+theta0 = 0*2*np.pi
 
-cam = Cam(Y0, S, THETA0, THETAM, THETA_STEP, XI)
+def tsaLen(theta, theta0):
+    return sqrt(D**2 + (A+B + R0*theta)**2) - sqrt(D**2 + (A+B + R0*theta0)**2)
 
-print(cam.equivalent_angle(0.14, 0.01))
+for i in range(10, 50):
+    try:
+        cam = Cam(np.array([0.05, 0.1]), theta0, 10*2*np.pi, 500, i, 0)
+        print("xi = " + str(i) + " => " + str(cam.perim(0, len(cam.pts))))
+    except Exception as e:
+        print(e)
 
-def show_cam(cam):
-    fig, ax = plt.subplots()
 
-    # plt.plot(a_list, r_list)
-    # plt.show()
 
-    ax.plot(0,0,'r.')
-    ax.plot(0,SD, 'g.')
 
-    ax.plot([pp[0] for pp in cam.ptsRotated(GAMMA)], [pp[1] for pp in cam.ptsRotated(GAMMA)])
-    ax.plot(cam.ptsRotated(GAMMA)[idx][0], cam.ptsRotated(GAMMA)[idx][1], 'o')
-    ax.grid()
-    ax.set_aspect('equal')
-    plt.show()
 
-l_list = []
-for gamma in np.arange(0, np.pi, 0.01):
-    l, idx = cam.equivalent_string_lenght(gamma)
-    l_list.append(l)
+    
 
-plt.plot(np.arange(0, np.pi, 0.01), l_list, '-')
-plt.show()
+
+

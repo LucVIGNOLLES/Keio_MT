@@ -7,17 +7,17 @@ from math import atan2
 plt.style.use('dark_background')
 
 # TSA parameters
-D = 0.15
+D = 0.015
 R0 = 0.001
-A = 0.1
+A = 0.01
 B = 0.0
 
 # Optimization parameters
-XI = 30 # Desired reduction ratio
+XI = 15 # Desired reduction ratio
 
 THETA0 = 0 * 2*np.pi # Motion range lower boundary
-THETAM = 15 * 2*np.pi # Motion range upper boundary
-THETA_STEP = 15* 2 * np.pi/100
+THETAM = 5 * 2*np.pi # Motion range upper boundary
+THETA_STEP = 5* 2 * np.pi/200
 
 GAMMA_STEP = 1/XI * THETA_STEP
 
@@ -27,7 +27,7 @@ GAMMA_STEP = 1/XI * THETA_STEP
 SD = 0.1 # Distance between the string separator and the cam's COR 
 S = np.array([0, SD]) # Coordinates of the string separator
 
-Y0 = 0.01
+Y0 = 0.00094791
 
 # Work around the unreachable code error
 cross = lambda x,y:np.cross(x,y)
@@ -61,7 +61,7 @@ def epsilon_solve(e, p, t, h):
     The solution epsilon is how much the points need to be moved on the current tangent line 
     of the cam.
     """
-    return cross(p + e*t, S)*h/np.linalg.norm(S- p - e*t) - XI
+    return cross(p + e*t, S)*h/np.linalg.norm(S - (p + e*t)) - XI
 
 def epsilon_solve_fun(p, t, h):
     """
@@ -107,6 +107,33 @@ def generate_cam_pts(y0, S, theta0, thetaM, theta_step,  xi):
 
     return [rotate(p, -i*gamma_step) for i, p in enumerate(p_list)]
 
+def generate_round_pts(y0, S, theta0, thetaM, theta_step,  xi):
+    p0 = np.array([equal_moment_x(y0, h_fun(theta0)), y0])
+    t0 = (p0-S)/np.linalg.norm(p0-S)
+
+    p = p0
+    t = t0
+
+    p_list = [p]
+    t_list = [t]
+
+    gamma_step = 1/xi * theta_step
+
+    for theta in np.arange(theta0, thetaM, theta_step):
+        p = rotate(p, gamma_step)
+        t = rotate(t, gamma_step)
+
+        p, t, a = new_pt_tan_and_angle(p, t, h_fun(theta))
+
+        p_list.append(p)
+        t_list.append(t)
+
+    base_pts = [rotate(p, -i*gamma_step) for i, p in enumerate(p_list)]
+    norms = [np.linalg.norm(pt) for pt in base_pts]
+    mean = np.mean(norms)
+
+    return [rotate(np.array([mean, 0]), (-i+10)*gamma_step) for i, p in enumerate(p_list)]
+
 ## ======
 
 class Cam:
@@ -116,9 +143,27 @@ class Cam:
         self.alpha_step = 1/xi * theta_step
 
         self.gamma0 = atan2(self.pts[0][1], self.pts[0][0])
-        self.gammaM = atan2(self.pts[-1][1], self.pts[-1][0])
+        self.gammaf = atan2(self.pts[-1][1], self.pts[-1][0])
+
+        self.gammaM = 2*np.pi - self.gammaf - self.gamma0
 
         self.num_pts = len(self.pts)
+
+    @classmethod
+    def round(cls, y0, S, theta0, thetaM, theta_step,  xi):
+        cls.pts = generate_round_pts(y0, S, theta0, thetaM, theta_step, xi)
+        cls.s_pos = S
+        cls.alpha_step = 1/xi * theta_step
+
+        cls.gamma0 = atan2(cls.pts[0][1], cls.pts[0][0])
+        cls.gammaf = atan2(cls.pts[-1][1], cls.pts[-1][0])
+
+        cls.gammaM = 2*np.pi - cls.gammaf - cls.gamma0
+
+        cls.num_pts = len(cls.pts)
+
+        return cls
+
 
     def ptsRotated(self, gamma):
         """
@@ -165,6 +210,25 @@ class Cam:
 
         return gamma
 
+    def bissect_eq_angle(self, lenght, eps = 1e-4):
+        gamma_min = 0
+        gamma_max = np.pi
+
+        gamma = self.gammaM/2
+
+        while True:
+            l, _ = self.equivalent_string_lenght(gamma)
+            if l < lenght:
+                gamma_max = gamma
+                gamma = gamma_min + (gamma-gamma_min)/2
+            else:
+                gamma_min = gamma
+                gamma = gamma + (gamma_max - gamma)/2
+
+            if abs(l - lenght) < eps:
+                break
+
+        return gamma
 
 # Main
 
@@ -189,6 +253,10 @@ if __name__ == "__main__":
 
     pp_list = [rotate(p, -i*GAMMA_STEP) for i, p in enumerate(p_list)]
 
+    cam = Cam(Y0, S, THETA0, THETAM, THETA_STEP, XI)
+
+    pp_list = cam.pts
+
     # r_list = [np.linalg.norm(pp) for pp in pp_list]
     # a_list = [atan2(pp[1], pp[0]) for pp in pp_list]
 
@@ -197,10 +265,10 @@ if __name__ == "__main__":
     # plt.plot(a_list, r_list)
     # plt.show()
 
-    ax.plot(0,0,'r.')
-    ax.plot(0,SD, 'g.')
+    ax.plot(0,0,'ro')
+    ax.plot(0,SD, 'go')
 
-    ax.plot([pp[0] for pp in pp_list], [pp[1] for pp in pp_list])
+    ax.plot([pp[0] for pp in pp_list], [pp[1] for pp in pp_list], '.-')
     ax.grid()
     ax.set_aspect('equal')
     plt.show()
