@@ -17,9 +17,6 @@ XI = 20 # Desired reduction ratio
 
 THETA0 = 0 * 2*np.pi # Motion range lower boundary
 THETAM = 10 * 2*np.pi # Motion range upper boundary
-THETA_STEP = 5* 2 * np.pi/200
-
-GAMMA_STEP = 1/XI * THETA_STEP
 
 S = np.array([0.05, 0.1]) # Coordinates of the string separator
 
@@ -94,7 +91,7 @@ def generate_cam_pts(s, theta0, thetaM, num_pts,  xi, offset):
 
     return [rotate(p, -i*gamma_step) for i, p in enumerate(p_list)]
 
-class Cam:
+class CamTgtCriteria:
     def __init__(self, s, theta0, thetaM, num_pts, xi, offset):
         self.pts = generate_cam_pts(s, theta0, thetaM, num_pts, xi, offset)
         self.s_pos = s
@@ -139,9 +136,9 @@ class Cam:
 
 if __name__ == "__main__":
     fig, ax = plt.subplots()
-    for xi in range(26, 27):
+    for xi in range(20, 21):
         try:
-            cam = Cam(S,THETA0, xi/12*THETAM, 500, xi, 0)
+            cam = CamTgtCriteria(S,THETA0, THETAM, 50, xi, 0)
 
             test_idx = 0
 

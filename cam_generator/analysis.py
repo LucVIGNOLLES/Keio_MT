@@ -4,26 +4,29 @@ from math import sqrt
 
 from cam_gen import Cam, D, A, B, R0
 
-theta0 = 0*2*np.pi
+theta0 = 5*2*np.pi
+thetam = 25*2*np.pi
 
 def tsaLen(theta, theta0):
     return sqrt(D**2 + (A+B + R0*theta)**2) - sqrt(D**2 + (A+B + R0*theta0)**2)
 
-for xi in range(20, 30):
-    cam = Cam(np.array([0.05, 0.1]), theta0, 10*2*np.pi, 500, xi, 0)
+xi = 40
+cam1 = Cam(np.array([0.1, 0.2]), theta0, thetam, 500, xi, 0)
+cam1.show()
+l0 = cam1.outStringLen(0)
 
-    theta_step = cam.xi*cam.alpha_step
-    theta_list = [theta0+i*theta_step for i in range(cam.num_pts)]
+theta_step = cam1.xi*cam1.alpha_step
+theta_list = [theta0+i*theta_step for i in range(cam1.num_pts)]
 
-    len_in_lst = [tsaLen(theta, theta0) for theta in theta_list]
-    len_out_lst = [cam.outStringLen(i) for i in range(cam.num_pts)]
+len_in_lst = [tsaLen(theta, theta0) for theta in theta_list]
+len_out_lst_cam1 = [cam1.outStringLen(i) - l0 for i in range(cam1.num_pts)]
 
-    len_total_lst = [lin + lout for lin, lout in zip(len_in_lst, len_out_lst)]
+len_total_lst = [lin + lout for lin, lout in zip(len_in_lst, len_out_lst_cam1)]
 
-    plt.plot(len_out_lst)
-    plt.plot(len_in_lst)
-    plt.plot(len_total_lst)
-    print(xi)
+#plt.plot(theta_list, len_out_lst_cam1, label = 'lout')
+#plt.plot(theta_list, len_in_lst, label = 'lin')
+plt.plot(theta_list, len_total_lst, label = 'tot')
+plt.legend()
 plt.show()
 
 
