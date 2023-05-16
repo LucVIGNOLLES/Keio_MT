@@ -5,18 +5,18 @@ from scipy.optimize import root_scalar
 from math import sqrt
 
 # TSA parameters
-D = 0.100
-R0 = 0.002
+D = 0.200
+R0 = 0.0015
 A = 0.035
 B = 0.006
 
 S = np.array([0.054, 0.217]) # Coordinates of the string separator
 
 # Optimization parameters
-XI = 30 # Desired reduction ratio
+XI = 50 # Desired reduction ratio
 
 THETA0 = 0 * 2*np.pi # Motion range lower boundary
-THETAM = 25 * 2*np.pi # Motion range upper boundary
+THETAM = 28 * 2*np.pi # Motion range upper boundary
 
 def h_fun(theta):
     """
@@ -65,12 +65,15 @@ def tangent_criteria_factor(theta, s, p, t, xi):
 if __name__ == "__main__":  
 
     fig = plt.figure()
-    ax = plt.axes(xlim =(-0.07, 0.08), 
-                ylim =(-0.05, 0.1))
+    ax = plt.axes(xlim =(-0.07, 0.1), 
+                ylim =(-0.07, 0.07))
     ax.set_aspect('equal')
+    ax.set_xlabel("x (m)")
+    ax.set_ylabel("y (m)")
+    ax.grid()
     ims = []
 
-    num_pts = 2000
+    num_pts = 20
     offset = 0
 
     #Initial point and tangent
@@ -78,14 +81,17 @@ if __name__ == "__main__":
     t0 = (p0-S)/np.linalg.norm(p0-S)
 
     line_end = S + 1.5*(p0-S)
+    tg_end = p0 + 0.05*t0
 
-    im_center, = ax.plot(0,0, '.r')
-    im_line,  = ax.plot([S[0], line_end[0]], [S[1], line_end[1]], '-r')
-    im_circle = ax.add_patch(plt.Circle((0, 0), XI/h_fun(THETA0), color='r', fill = False))
-    im_tg, = ax.plot([0, p0[0]], [0, p0[1]], 'g-')
-    im_cam, = plt.plot(p0[0], p0[1], '.b')
+    im_line,  = ax.plot([S[0], line_end[0]], [S[1], line_end[1]], '-r', label = "String pulling line")
+    im_circle = ax.add_patch(plt.Circle((0, 0), XI/h_fun(THETA0), color='g', fill = False))
+    im_normal, = ax.plot([0, p0[0]], [0, p0[1]], 'g-', label = "Equivalent lever arm")
+    im_cam, = plt.plot(p0[0], p0[1], '-b', label = "Cam outline")
+    im_point, = plt.plot(p0[0], p0[1], 'Db')
+    im_center, = ax.plot(0,0, '.r', label = "Cam COR")
+    im_tg, = plt.plot([p0[0], tg_end[0]], [p0[1], tg_end[1]], '--b')
 
-    ims.append([im_center, im_line, im_circle, im_tg, im_cam])
+    ims.append([im_center, im_line, im_circle, im_normal, im_cam, im_point, im_tg])
 
     #Optional offset in the direction of the tangent
     p = p0 + offset* t0
@@ -105,6 +111,9 @@ if __name__ == "__main__":
         p = rotate(p, gamma_step)
         t = rotate(t, gamma_step)
 
+        tg_end = p + 0.05*t
+        im_tg, = plt.plot([p[0], tg_end[0]], [p[1], tg_end[1]], '--b')
+
         cam_pts = [rotate(p, 1/XI*theta_step) for p in cam_pts]
 
         #find intersection between the rotated tangent and the equal moment line
@@ -115,18 +124,26 @@ if __name__ == "__main__":
         p = S + v_int*(a-S)
         t = (p-S)/np.linalg.norm(p-S)
 
-        cam_pts.append(p)
-
         #add plots to animation
         line_end = S + 1.5*(a-S)
 
-        im_center, = ax.plot(0,0, '.r')
         im_line,  = ax.plot([S[0], line_end[0]], [S[1], line_end[1]], '-r')
         im_circle = ax.add_patch(plt.Circle((0, 0), XI/h_fun(theta), color='g', fill = False))
-        im_tg, = ax.plot([0, a[0]], [0, a[1]], 'g-')
-        im_cam, = ax.plot([pp[0] for pp in cam_pts], [pp[1] for pp in cam_pts], 'b-')
+        im_normal, = ax.plot([0, a[0]], [0, a[1]], 'g-')
+        im_cam, = ax.plot([pp[0] for pp in cam_pts], [pp[1] for pp in cam_pts], 'bD-', linewidth = 2)
+        im_center, = ax.plot(0,0, '.r')
 
-        ims.append([im_center, im_line, im_circle, im_tg, im_cam])
+        ims.append([im_center, im_line, im_circle, im_normal, im_cam, im_tg])
 
-    ani = animation.ArtistAnimation(fig, ims, interval = 200)
+        cam_pts.append(p)
+        tg_end = p + 0.05*t
+        im_tg, = plt.plot([p[0], tg_end[0]], [p[1], tg_end[1]], '--b')
+        im_cam, = ax.plot([pp[0] for pp in cam_pts], [pp[1] for pp in cam_pts], 'bD-', linewidth = 2)
+
+
+        ims.append([im_center, im_line, im_circle, im_normal, im_cam, im_tg])
+
+    ani = animation.ArtistAnimation(fig, ims, interval = 300)
+    #plt.legend()
     plt.show()
+    ani.save("results/cam_gen.mp4")

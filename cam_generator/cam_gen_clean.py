@@ -3,21 +3,21 @@ import matplotlib.pyplot as plt
 from scipy.optimize import fmin, root_scalar
 from math import sqrt
 
-plt.style.use('dark_background')
+#plt.style.use('dark_background')
 
 # TSA parameters
-D = 0.100
-R0 = 0.002
-A = 0.025
+D = 0.200
+R0 = 0.0015
+A = 0.035
 B = 0.006
 
 S = np.array([0.054, 0.217]) # Coordinates of the string separator
 
 # Optimization parameters
-XI = 20 # Desired reduction ratio
+XI = 50 # Desired reduction ratio
 
-THETA0 = 3 * 2*np.pi # Motion range lower boundary
-THETAM = 12 * 2*np.pi # Motion range upper boundary
+THETA0 = 0 * 2*np.pi # Motion range lower boundary
+THETAM = 28 * 2*np.pi # Motion range upper boundary
 
 def h_fun(theta):
     """
@@ -143,14 +143,17 @@ class Cam:
     def show(self):
         fig, ax = plt.subplots()
 
-        ax.plot(0,0,'ro')
+        ax.plot(0,0,'ro', label = "Cam COR")
         ax.plot(self.s_pos[0], self.s_pos[1], 'go')
 
-        ax.plot([pp[0] for pp in self.pts], [pp[1] for pp in self.pts], '-')
+        ax.plot([pp[0] for pp in self.pts], [pp[1] for pp in self.pts], '-', label = "Cam outline", linewidth=2)
         #ax.grid()
         ax.set_aspect('equal')
+        ax.set_xlabel("x coordinate (m)")
+        ax.set_ylabel("y coordinate (m)")
+        plt.legend()
         plt.show()
 
 if __name__ == "__main__":
-    cam = Cam(S, THETA0, THETAM, 500, XI, 0)
+    cam = Cam(S, THETA0, THETAM, 100, XI, 0)
     cam.show()
