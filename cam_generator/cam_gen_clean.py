@@ -7,17 +7,19 @@ from math import sqrt
 
 # TSA parameters
 D = 0.200
-R0 = 0.0015
-A = 0.035
-B = 0.006
+R0 = 0.36e-3
+A = 0.020
+B = 0.002
 
-S = np.array([0.054, 0.217]) # Coordinates of the string separator
+S = np.array([0.0605, 0.3625 - D]) # Coordinates of the string separator
 
 # Optimization parameters
-XI = 50 # Desired reduction ratio
+XI = 200 # Desired reduction ratio
 
 THETA0 = 0 * 2*np.pi # Motion range lower boundary
-THETAM = 28 * 2*np.pi # Motion range upper boundary
+THETAM = 110 * 2*np.pi # Motion range upper boundary
+
+THETA_MAX = (D*np.pi- 2*(A+B))/(2*R0)
 
 def h_fun(theta):
     """
@@ -146,8 +148,8 @@ class Cam:
         ax.plot(0,0,'ro', label = "Cam COR")
         ax.plot(self.s_pos[0], self.s_pos[1], 'go')
 
-        ax.plot([pp[0] for pp in self.pts], [pp[1] for pp in self.pts], '-', label = "Cam outline", linewidth=2)
-        #ax.grid()
+        ax.plot([pp[0] for pp in self.pts], [pp[1] for pp in self.pts], '.-', label = "Cam outline", linewidth=2)
+        ax.grid()
         ax.set_aspect('equal')
         ax.set_xlabel("x coordinate (m)")
         ax.set_ylabel("y coordinate (m)")
@@ -157,3 +159,9 @@ class Cam:
 if __name__ == "__main__":
     cam = Cam(S, THETA0, THETAM, 100, XI, 0)
     cam.show()
+
+    filename = "cams/cam_" + str(XI) + "_" + str(D).strip("0.") + "_" + str(R0).strip("0.") + "_" + str(A).strip("0.") + "_" + str(B).strip("0.") + ".csv"
+
+    with open(filename, 'w') as f:
+        for p in cam.pts:
+            f.write(str(1000*p[0]) + ',' + str(1000*p[1]) + ',' + str(0) + '\n') # 1000 foactor converts to mm
