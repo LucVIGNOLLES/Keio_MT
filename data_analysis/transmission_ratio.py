@@ -2,12 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from experiment_data import ExpData
 
-data_cam = ExpData("data_raw/rev_6_Cam_200_06mm_l1x2.txt", 20, -60)
-data_pulley = ExpData("data_raw/Cam_r25mm_n07mm_ldb.txt", 1, -100)
+def moving_average(x, w):
+    """
+    Returns a new list where each data point has been averaged by its w nearest neighbors
+    new list is smaller of size len(x) - w
+    """
+    return np.convolve(x, np.ones(w), 'valid') / w
+
+data_cam = ExpData("data_raw/fast_rev_3_Cam_200_06mm_l1x2.txt", 20, -60)
+data_pulley = ExpData("data_raw/fast_rev3_Cam_r30mm_06mm_l1x2.txt", 1, -100)
 
 fig, ax = plt.subplots()
 
-
+# for each data line, perform the pseudi derivative to obtain an approximation for the transmission ratio
 for data in [data_cam, data_pulley]:
     m_pos = data.motor_pos
     c_pos = data.cam_pos
@@ -23,7 +30,7 @@ for data in [data_cam, data_pulley]:
             t_filtered.append(data.time[i])
             m_pos_filtered.append(c_pos[i])
 
-    ax.plot(t_filtered, Xi_approx, '.-', label = "proposed method")
+    ax.plot(moving_average(Xi_approx, 1), '.-', label = "proposed method")
 
 plt.legend()
 plt.show()
